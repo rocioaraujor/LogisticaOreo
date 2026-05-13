@@ -1,0 +1,170 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <title>Mondelez Wizard Edition - Oreo Logistics FINAL</title>
+    <link href="https://fonts.googleapis.com/css2?family=Press+Start+2P&family=Bungee&display=swap" rel="stylesheet">
+    <script src="https://cdn.jsdelivr.net/npm/phaser@3.60.0/dist/phaser.min.js"></script>
+    <style>
+        body { margin: 0; background: #000; overflow: hidden; }
+        canvas { image-rendering: -webkit-optimize-contrast; image-rendering: crisp-edges; }
+        #game-container { width: 100vw; height: 100vh; }
+    </style>
+</head>
+<body>
+    <div id="game-container"></div>
+    <script>
+        class BootScene extends Phaser.Scene {
+            constructor() { super('BootScene'); }
+            preload() {
+                this.load.crossOrigin = 'anonymous';
+                this.load.image('crate_mag', 'https://i.ibb.co/JWRDLh3z/caja-oreo.png'); 
+                this.load.image('crate_std', 'https://i.ibb.co/q3F7gFtZ/mago.png');     
+                this.load.image('bg', 'https://i.ibb.co/23hVfvLR/Gemini-Generated-Image-qe1aboqe1aboqe1a.png'); 
+                this.load.image('wizard', 'https://i.ibb.co/Xxx4KZDp/Picture1-removebg-preview.png');
+                
+                this.load.audio('musica_juego', 'https://raw.githubusercontent.com/rocioaraujor/ju/main/juego.ogg');
+                this.load.audio('sonido_gameover', 'https://raw.githubusercontent.com/rocioaraujor/gameover/main/gameover.ogg');
+                this.load.audio('sonido_caja', 'https://raw.githubusercontent.com/rocioaraujor/gameover/main/caja.ogg');
+
+                const sW = this.make.graphics({x: 0, y: 0, add: false}).fillStyle(0xffffff, 1).fillCircle(2, 2, 2);
+                sW.generateTexture('sparkW', 4, 4);
+                const sB = this.make.graphics({x: 0, y: 0, add: false}).fillStyle(0x0055a4, 1).fillCircle(2, 2, 2);
+                sB.generateTexture('sparkB', 4, 4);
+                
+                this.load.on('complete', () => this.scene.start('MenuScene'));
+            }
+        }
+
+        class MenuScene extends Phaser.Scene {
+            constructor() { super('MenuScene'); }
+            create() {
+                let bg = this.add.image(960, 540, 'bg').setAlpha(0.5).setDisplaySize(1920, 1080);
+
+                // Título Oreo Logistics con estilo Bungee (igual que Game Over)
+                const mainTitle = this.add.text(960, 320, 'OREO LOGISTICS', {
+                    fontFamily: 'Bungee', fontSize: '120px', color: '#6a0dad', align: 'center'
+                }).setOrigin(0.5).setStroke('#ffffff', 16).setShadow(10, 10, '#000000', 2, true, true);
+
+                this.tweens.add({ targets: mainTitle, y: 340, duration: 2000, yoyo: true, loop: -1, ease: 'Sine.easeInOut' });
+
+                // Subtítulo Mondelez con el mismo estilo pero más pequeño
+                this.add.text(960, 480, 'MONDELEZ WIZARD EDITION', {
+                    fontFamily: 'Bungee', fontSize: '45px', color: '#6a0dad' 
+                }).setOrigin(0.5).setStroke('#ffffff', 8).setShadow(4, 4, '#000000', 2);
+                
+                const startBtn = this.add.text(960, 750, 'HAZ CLIC PARA EMPEZAR', {
+                    fontFamily: '"Press Start 2P"', fontSize: '40px', color: '#ffff00'
+                }).setOrigin(0.5).setStroke('#000000', 6).setInteractive({ useHandCursor: true });
+
+                this.tweens.add({ targets: startBtn, scale: 1.15, duration: 600, yoyo: true, loop: -1, ease: 'Quad.easeInOut' });
+
+                startBtn.on('pointerdown', () => {
+                    this.sound.resumeAll();
+                    if (this.cache.audio.exists('musica_juego')) {
+                        this.sound.play('musica_juego', { loop: true, volume: 0.3 });
+                    }
+                    this.scene.start('GameScene');
+                });
+            }
+        }
+
+        class GameScene extends Phaser.Scene {
+            constructor() { super('GameScene'); }
+            init() { 
+                this.vfr = 0; this.timeLeft = 40; this.isGameOver = false; 
+                this.occupiedCells = new Set(); this.cellValues = {}; 
+                this.generateVFR();
+            }
+            generateVFR() {
+                let total = 64; let weights = []; let sum = 0;
+                for (let i = 0; i < total; i++) {
+                    let w = Math.pow(Math.random(), 2) * 20 + 5; 
+                    weights.push(w); sum += w;
+                }
+                let index = 0;
+                for (let gx = 0; gx < 8; gx++) { 
+                    for (let gy = 0; gy < 8; gy++) { 
+                        this.cellValues[`${gx},${gy}`] = (weights[index] / sum) * 100;
+                        index++;
+                    }
+                }
+            }
+            create() {
+                this.add.image(960, 540, 'bg').setDisplaySize(1920, 1080);
+                this.add.rectangle(210, 480, 160, 160, 0x333333, 0.7).setStrokeStyle(4, 0x00ccff, 1);
+                this.wizard = this.add.image(210, 1080, 'wizard').setScale(1.6).setOrigin(0.5, 1); 
+                this.vfrText = this.add.text(80, 70, 'VFR: 0%', { fontFamily: 'Bungee', fontSize: '50px', color: '#fff' }).setStroke('#0055a4', 10).setDepth(10);
+                this.add.text(80, 140, 'Arrastra las cajas de Oreo\nal contenedor central', { fontFamily: '"Press Start 2P"', fontSize: '22px', color: '#ffffff', lineSpacing: 10 }).setStroke('#000000', 8).setDepth(10);
+                this.timerText = this.add.text(1600, 70, '40s', { fontFamily: 'Bungee', fontSize: '60px', color: '#ffff00' }).setStroke('#000', 8).setDepth(10);
+                this.lightningGraphics = this.add.graphics().setDepth(5);
+                this.sparksW = this.add.particles(0, 0, 'sparkW', { speed: { min: 100, max: 400 }, scale: { start: 1.5, end: 0 }, lifespan: 600, gravityY: 200, emitting: false });
+                this.sparksB = this.add.particles(0, 0, 'sparkB', { speed: { min: 80, max: 350 }, scale: { start: 1.2, end: 0 }, lifespan: 500, gravityY: 150, emitting: false });
+                this.spawnBox();
+                this.time.addEvent({ delay: 1000, callback: () => { if (this.timeLeft > 0) { this.timeLeft--; this.timerText.setText(this.timeLeft + 's'); } else if (!this.isGameOver) { this.gameOver(); } }, loop: true });
+            }
+            createMagicBeam(startX, startY, endX, endY) {
+                this.lightningGraphics.clear();
+                this.lightningGraphics.lineStyle(12, 0x4b2c80, 0.4);
+                this.drawBolt(startX, startY, endX, endY);
+                this.lightningGraphics.lineStyle(6, 0x0055a4, 0.7);
+                this.drawBolt(startX, startY, endX, endY);
+                this.lightningGraphics.lineStyle(3, 0xffffff, 1);
+                this.drawBolt(startX, startY, endX, endY);
+                this.sparksW.emitParticleAt(endX, endY, 30);
+                this.sparksB.emitParticleAt(endX, endY, 20);
+                this.time.delayedCall(200, () => { this.lightningGraphics.clear(); });
+                
+                if (this.cache.audio.exists('sonido_caja')) {
+                    this.sound.play('sonido_caja', { volume: 0.8 });
+                }
+            }
+            drawBolt(x1, y1, x2, y2) {
+                this.lightningGraphics.beginPath(); this.lightningGraphics.moveTo(x1, y1);
+                for (let i = 1; i < 8; i++) {
+                    let tx = x1 + (x2 - x1) * (i / 8) + Phaser.Math.Between(-30, 30);
+                    let ty = y1 + (y2 - y1) * (i / 8) + Phaser.Math.Between(-30, 30);
+                    this.lightningGraphics.lineTo(tx, ty);
+                }
+                this.lightningGraphics.lineTo(x2, y2).strokePath();
+            }
+            spawnBox() {
+                if (this.isGameOver) return;
+                const box = this.add.image(210, 480, Phaser.Math.Between(0, 10) > 5 ? 'crate_mag' : 'crate_std').setInteractive({ draggable: true }).setDisplaySize(85, 85);
+                box.on('drag', (p, x, y) => { box.x = x; box.y = y; });
+                box.on('dragend', () => {
+                    const startX = 650; const startY = 215; const step = 85;
+                    const gx = Math.round((box.x - startX) / step);
+                    const gy = Math.round((box.y - startY) / step);
+                    const key = `${gx},${gy}`;
+                    if (gx >= 0 && gx < 8 && gy >= 0 && gy < 8 && !this.occupiedCells.has(key)) {
+                        const tx = startX + (gx * step); const ty = startY + (gy * step);
+                        this.createMagicBeam(210, 800, tx, ty);
+                        box.setPosition(tx, ty).disableInteractive();
+                        this.occupiedCells.add(key);
+                        this.vfr += this.cellValues[key];
+                        this.vfrText.setText('VFR: ' + (this.occupiedCells.size === 64 ? 100 : this.vfr.toFixed(1)) + '%');
+                        this.spawnBox();
+                    } else {
+                        this.tweens.add({ targets: box, x: 210, y: 480, duration: 300, ease: 'Back.out' });
+                    }
+                });
+            }
+            gameOver() {
+                this.isGameOver = true;
+                this.sound.stopAll();
+                if (this.cache.audio.exists('sonido_gameover')) {
+                    this.sound.play('sonido_gameover', { volume: 0.5 });
+                }
+                this.add.rectangle(960, 540, 1920, 1080, 0x000, 0.9).setDepth(100);
+                this.add.text(960, 350, 'GAME OVER', { fontFamily: 'Bungee', fontSize: '120px', color: '#ff0000' }).setOrigin(0.5).setDepth(101).setStroke('#fff', 12);
+                this.add.text(960, 520, '"Si hubieran sido cajas de HALLS\nhabría sido más difícil"', { fontFamily: '"Press Start 2P"', fontSize: '32px', color: '#ffff00', align: 'center', wordWrap: { width: 1400 } }).setOrigin(0.5).setDepth(101);
+                this.add.text(960, 700, 'VFR FINAL: ' + this.vfr.toFixed(1) + '%', { fontFamily: 'Bungee', fontSize: '60px', color: '#fff' }).setOrigin(0.5).setDepth(101);
+                this.input.on('pointerdown', () => location.reload());
+            }
+        }
+        const config = { type: Phaser.AUTO, width: 1920, height: 1080, parent: 'game-container', render: { antialias: true, roundPixels: true }, scale: { mode: Phaser.Scale.FIT, autoCenter: Phaser.Scale.CENTER_BOTH }, scene: [BootScene, MenuScene, GameScene] };
+        new Phaser.Game(config);
+    </script>
+</body>
+</html>
