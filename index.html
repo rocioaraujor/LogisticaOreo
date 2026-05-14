@@ -30,10 +30,16 @@
 
                 const sW = this.make.graphics({x: 0, y: 0, add: false}).fillStyle(0xffffff, 1).fillCircle(2, 2, 2);
                 sW.generateTexture('sparkW', 4, 4);
-                const sB = this.make.graphics({x: 0, y: 0, add: false}).fillStyle(0x0055a4, 1).fillCircle(2, 2, 2);
-                sB.generateTexture('sparkB', 4, 4);
                 
-                this.load.on('complete', () => this.scene.start('MenuScene'));
+                // TRUCO MÁGICO: Forzamos al navegador a pre-cargar las fuentes en memoria
+                this.add.text(-1000, -1000, 'Preload', { fontFamily: 'Bungee' });
+                this.add.text(-1000, -1000, 'Preload', { fontFamily: '"Press Start 2P"' });
+            }
+            create() {
+                // Esperamos activamente a que las fuentes externas de Google estén listas en el navegador
+                document.fonts.ready.then(() => {
+                    this.scene.start('MenuScene');
+                });
             }
         }
 
@@ -42,17 +48,23 @@
             create() {
                 let bg = this.add.image(960, 540, 'bg').setAlpha(0.5).setDisplaySize(1920, 1080);
 
-                // TÍTULO PRINCIPAL: Estilo Bungee Morado/Blanco (Igual que Game Over)
+                // TÍTULO: Estilo idéntico a Game Over (Bungee, borde grueso blanco de 12px y sombra negra sólida)
                 const mainTitle = this.add.text(960, 320, 'OREO LOGISTICS', {
-                    fontFamily: 'Bungee', fontSize: '120px', color: '#6a0dad', align: 'center'
-                }).setOrigin(0.5).setStroke('#ffffff', 16).setShadow(10, 10, '#000000', 2, true, true);
+                    fontFamily: 'Bungee', 
+                    fontSize: '120px', 
+                    color: '#6a0dad', 
+                    align: 'center'
+                }).setOrigin(0.5).setStroke('#ffffff', 12).setShadow(0, 0, '#000000', 10, true, true);
 
                 this.tweens.add({ targets: mainTitle, y: 340, duration: 2000, yoyo: true, loop: -1, ease: 'Sine.easeInOut' });
 
-                // SUBTÍTULO: Estilo Bungee Morado/Blanco
+                // SUBTÍTULO: Mismo estilo Bungee imponente pero en 45px
                 this.add.text(960, 480, 'MONDELEZ WIZARD EDITION', {
-                    fontFamily: 'Bungee', fontSize: '45px', color: '#6a0dad' 
-                }).setOrigin(0.5).setStroke('#ffffff', 8).setShadow(4, 4, '#000000', 2);
+                    fontFamily: 'Bungee', 
+                    fontSize: '45px', 
+                    color: '#6a0dad',
+                    align: 'center'
+                }).setOrigin(0.5).setStroke('#ffffff', 8).setShadow(0, 0, '#000000', 6, true, true);
                 
                 const startBtn = this.add.text(960, 750, 'HAZ CLIC PARA EMPEZAR', {
                     fontFamily: '"Press Start 2P"', fontSize: '40px', color: '#ffff00'
@@ -94,18 +106,12 @@
             create() {
                 this.add.image(960, 540, 'bg').setDisplaySize(1920, 1080);
                 this.add.rectangle(210, 480, 160, 160, 0x333333, 0.7).setStrokeStyle(4, 0x00ccff, 1);
-                
-                // Mago escala 1.6
                 this.wizard = this.add.image(210, 1080, 'wizard').setScale(1.6).setOrigin(0.5, 1); 
-                
                 this.vfrText = this.add.text(80, 70, 'VFR: 0%', { fontFamily: 'Bungee', fontSize: '50px', color: '#fff' }).setStroke('#0055a4', 10).setDepth(10);
                 this.add.text(80, 140, 'Arrastra las cajas de Oreo\nal contenedor central', { fontFamily: '"Press Start 2P"', fontSize: '22px', color: '#ffffff', lineSpacing: 10 }).setStroke('#000000', 8).setDepth(10);
                 this.timerText = this.add.text(1600, 70, '40s', { fontFamily: 'Bungee', fontSize: '60px', color: '#ffff00' }).setStroke('#000', 8).setDepth(10);
-                
                 this.lightningGraphics = this.add.graphics().setDepth(5);
                 this.sparksW = this.add.particles(0, 0, 'sparkW', { speed: { min: 100, max: 400 }, scale: { start: 1.5, end: 0 }, lifespan: 600, gravityY: 200, emitting: false });
-                this.sparksB = this.add.particles(0, 0, 'sparkB', { speed: { min: 80, max: 350 }, scale: { start: 1.2, end: 0 }, lifespan: 500, gravityY: 150, emitting: false });
-                
                 this.spawnBox();
                 this.time.addEvent({ delay: 1000, callback: () => { if (this.timeLeft > 0) { this.timeLeft--; this.timerText.setText(this.timeLeft + 's'); } else if (!this.isGameOver) { this.gameOver(); } }, loop: true });
             }
@@ -118,10 +124,8 @@
                 this.lightningGraphics.lineStyle(3, 0xffffff, 1);
                 this.drawBolt(startX, startY, endX, endY);
                 this.sparksW.emitParticleAt(endX, endY, 30);
-                this.sparksB.emitParticleAt(endX, endY, 20);
                 this.time.delayedCall(200, () => { this.lightningGraphics.clear(); });
                 
-                // Sonido de caja
                 if (this.cache.audio.exists('sonido_caja')) {
                     this.sound.play('sonido_caja', { volume: 0.6 });
                 }
@@ -165,12 +169,16 @@
                 }
                 this.add.rectangle(960, 540, 1920, 1080, 0x000, 0.9).setDepth(100);
                 
-                // Game Over Rojo
-                this.add.text(960, 350, 'GAME OVER', { fontFamily: 'Bungee', fontSize: '120px', color: '#ff0000' }).setOrigin(0.5).setDepth(101).setStroke('#fff', 12);
-                this.add.text(960, 520, '"Si hubieran sido cajas de HALLS\nhabría sido más difícil"', { fontFamily: '"Press Start 2P"', fontSize: '32px', color: '#ffff00', align: 'center', wordWrap: { width: 1400 } }).setOrigin(0.5).setDepth(101);
-                this.add.text(960, 700, 'VFR FINAL: ' + this.vfr.toFixed(1) + '%', { fontFamily: 'Bungee', fontSize: '60px', color: '#fff' }).setOrigin(0.5).setDepth(101);
+                this.add.text(960, 320, 'GAME OVER', { fontFamily: 'Bungee', fontSize: '120px', color: '#ff0000' }).setOrigin(0.5).setDepth(101).setStroke('#fff', 12);
+                this.add.text(960, 490, '"Si hubieran sido cajas de HALLS\nhabría sido más difícil"', { fontFamily: '"Press Start 2P"', fontSize: '32px', color: '#ffff00', align: 'center', wordWrap: { width: 1400 } }).setOrigin(0.5).setDepth(101);
+                this.add.text(960, 650, 'VFR FINAL: ' + this.vfr.toFixed(1) + '%', { fontFamily: 'Bungee', fontSize: '60px', color: '#fff' }).setOrigin(0.5).setDepth(101);
                 
-                this.input.on('pointerdown', () => location.reload());
+                const dText = this.add.text(960, 850, 'Para reiniciar presiona Enter', { fontFamily: '"Press Start 2P"', fontSize: '20px', color: '#aaaaaa' }).setOrigin(0.5).setDepth(101);
+                this.tweens.add({ targets: dText, alpha: 0.4, duration: 800, yoyo: true, loop: -1 });
+
+                this.input.keyboard.once('keydown-ENTER', () => {
+                    location.reload();
+                });
             }
         }
         const config = { type: Phaser.AUTO, width: 1920, height: 1080, parent: 'game-container', render: { antialias: true, roundPixels: true }, scale: { mode: Phaser.Scale.FIT, autoCenter: Phaser.Scale.CENTER_BOTH }, scene: [BootScene, MenuScene, GameScene] };
